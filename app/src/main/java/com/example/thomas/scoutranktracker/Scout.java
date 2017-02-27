@@ -7,6 +7,10 @@ import java.util.Map;
 
 import android.app.Activity;
 import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteStatement;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.View;
@@ -14,6 +18,7 @@ import android.util.DisplayMetrics;
 import android.widget.Button;
 import android.widget.ExpandableListView;
 import android.widget.ExpandableListView.OnChildClickListener;
+import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.Toast;
 import android.view.MenuItem;
@@ -25,18 +30,38 @@ public class Scout extends Activity {
     List<String> childList;
     Map<String, List<String>> regs;
     ExpandableListView expListView;
-    RadioButton marker;
-    Button button;
+    Database db = new Database(this);
+
+    boolean[] scoutTrac;
+    boolean[] tenderfootTrac;
+    boolean[] secondClassTrac;
+    boolean[] firstClassTrac;
+    boolean[] starTrac;
+    boolean[] lifeTrac;
+    boolean[] eagleTrac;
+    int[] number;
+    int rankNum;
+    int ScoutNum;
+    int TenderfoorNum;
+    int SecondClassNum;
+    int FirstClassNum;
+    int StarNum;
+    int LifeNum;
+    int EagleNum;
+    boolean rankRegs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scout);
 
-        createRankList();
-
-        createRegs();
-
+        createRankList(); // Makes rank list
+        createRegs();// Fills in requirements
+        setupBool();//creating boolean array;
+        if(db.tableExist()==false) {
+            createDB();
+        }
+        number = new int[10];
         expListView = (ExpandableListView) findViewById(R.id.expandableListView);
         final ExpandableListAdapter expListAdapter = new ExpandableListAdapter(this, groupList, regs);
         expListView.setAdapter(expListAdapter);
@@ -45,12 +70,110 @@ public class Scout extends Activity {
 
             public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
                 final String selected = (String) expListAdapter.getChild(groupPosition, childPosition);
-                Toast.makeText(getBaseContext(), selected, Toast.LENGTH_LONG).show();
+                int index = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, childPosition));
+                rankNum = getRegNum(groupPosition);
+
+                rankRegs = getBool(groupPosition,childPosition);
+                if(childPosition == 0) {
+                    for (int i = 0; i < rankNum; i++) {
+                        boolean temp = getBool(groupPosition, i);
+                        if (temp == true) {
+                            int j = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, i));
+                            parent.setItemChecked(j, true);
+                        }
+                    }
+                }
+
+                if (rankRegs == false && childPosition != 0) { // adding a requirement to the table
+
+                    if (childPosition != 0) {
+                        parent.setItemChecked(index, true);
+                        rankRegs= true;
+                        fillBool(groupPosition,childPosition, true);
+                        db.updateReg(groupPosition,rankRegs,childPosition);
+                        int testing = db.numberOfRows();
+
+                        Toast.makeText(getBaseContext(), "Checked OFF! testing= " + testing + " ", Toast.LENGTH_SHORT).show();
+
+                    }
+                    else {
+                        Toast.makeText(getBaseContext(), "You can't Check the Check", Toast.LENGTH_SHORT).show();
+                    }
+                }
+                else if(rankRegs == true)// removing a requirement from the table
+                {
+                    index = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, childPosition));
+                    parent.setItemChecked(index,false);
+                    rankRegs = false;
+                    fillBool(groupPosition,childPosition, false);
+                    db.updateReg(groupPosition,rankRegs,childPosition);
+                    Toast.makeText(getBaseContext(), "Guess you didn't do that one", Toast.LENGTH_SHORT).show();
+                }
+
                 return true;
             }
+
         });
+    }
+    @Override
+    protected void onResume(){
+        super.onResume();
+        expListView = (ExpandableListView) findViewById(R.id.expandableListView);
+        final ExpandableListAdapter expListAdapter = new ExpandableListAdapter(this, groupList, regs);
+        expListView.setAdapter(expListAdapter);
+        updateBool();
+        expListView.setOnChildClickListener(new OnChildClickListener() {
 
+            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
+                final String selected = (String) expListAdapter.getChild(groupPosition, childPosition);
+                int index = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, childPosition));
+                rankNum = getRegNum(groupPosition);
+                /*if(check(groupPosition)==true) {
+                    ImageView symbol = (ImageView) findViewById(R.id.image);
+                    symbol.setVisibility(View.GONE);
+                }*/
+                rankRegs = getBool(groupPosition,childPosition);
+               if(childPosition == 0) {
+                   for (int i = 0; i < rankNum; i++) {
+                       boolean temp = getBool(groupPosition, i);
+                       if (temp == true) {
+                           int j = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, i));
+                           parent.setItemChecked(j, true);
+                       }
+                   }
+               }
 
+                if (rankRegs == false && childPosition != 0) { // adding a requirement to the table
+
+                    if (childPosition != 0) {
+                        parent.setItemChecked(index, true);
+                        rankRegs= true;
+                        fillBool(groupPosition,childPosition, true);
+                        db.updateReg(groupPosition,rankRegs,childPosition);
+                        int testing = db.numberOfRows();
+
+                        Toast.makeText(getBaseContext(), "Checked OFF! testing= " + testing + " ", Toast.LENGTH_SHORT).show();
+
+                    }
+                    else {
+                        db.updateReg(groupPosition,rankRegs,childPosition);
+                        Toast.makeText(getBaseContext(), "You can't Check the Check", Toast.LENGTH_SHORT).show();
+                    }
+                }
+                else if(rankRegs == true)// removing a requirement from the table
+                {
+                    index = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, childPosition));
+                    parent.setItemChecked(index,false);
+                    rankRegs = false;
+                    fillBool(groupPosition,childPosition, false);
+                    db.updateReg(groupPosition,rankRegs,childPosition);
+                    Toast.makeText(getBaseContext(), "Guess you didn't do that one", Toast.LENGTH_SHORT).show();
+                }
+
+                return true;
+            }
+
+        });
     }
 
 
@@ -75,7 +198,6 @@ public class Scout extends Activity {
 
         return super.onOptionsItemSelected(item);
     }
-
     private void createRankList() {
         groupList = new ArrayList<String>();
         groupList.add("Scout");
@@ -88,7 +210,8 @@ public class Scout extends Activity {
     }
 
     private void createRegs() {
-        String[] scout = {" 1a) Repeat from memory the Scout Oath, Scout Law, Scout motto, and Scout\n" +
+        String[] scout = {"Click here to see what you have Checked off already\n",
+                " 1a) Repeat from memory the Scout Oath, Scout Law, Scout motto, and Scout\n" +
                 "slogan. In your own words, explain their meaning. ",
                 " 1b) Explain what Scout spirit is. Describe some ways you have shown Scout spirit\n" +
                         "by practicing the Scout Oath, Scout Law, Scout motto, and Scout slogan.",
@@ -120,7 +243,8 @@ public class Scout extends Activity {
                 " 7) Since joining the troop and while working on the Scout rank, participate in\n" +
                         "a Scoutmaster conference. "};
 
-        String[] tenderfoot = {" 1a) Present yourself to your leader, prepared for an overnight camping trip.\n" +
+        String[] tenderfoot = {"Click here to see what you have Checked off already\n",
+                " 1a) Present yourself to your leader, prepared for an overnight camping trip.\n" +
                 "Show the personal and camping gear you will use. Show the right way to\n" +
                 "pack and carry it. ",
                 " 1b) Spend at least one night on a patrol or troop campout. Sleep in a tent you\n" +
@@ -188,7 +312,8 @@ public class Scout extends Activity {
                         "rank requirement 7, participate in a Scoutmaster conference. ",
                 " 11) Successfully complete your board of review for the Tenderfoot rank."};
 
-        String[] secondClass = {" 1a) Since joining, participate in five separate troop/patrol activities, three of\n" +
+        String[] secondClass = {"Click here to see what you have Checked off already\n",
+                " 1a) Since joining, participate in five separate troop/patrol activities, three of\n" +
                 "which include overnight camping. These five activities do not include troop\n" +
                 "or patrol meetings. On at least two of the three campouts, spend the night in\n" +
                 "a tent that you pitch or other structure that you help erect (such as a lean-to,\n" +
@@ -298,7 +423,8 @@ public class Scout extends Activity {
                         "Tenderfoot requirement 10, participate in a Scoutmaster conference. ",
                 " 12) Successfully complete your board of review for the Second Class rank."};
 
-        String[] firstClass = {" 1a) Since joining, participate in 10 separate troop/patrol activities, six of\n" +
+        String[] firstClass = {"Click here to see what you have Checked off already\n",
+                " 1a) Since joining, participate in 10 separate troop/patrol activities, six of\n" +
                 "which include overnight camping. These 10 activities do not include troop\n" +
                 "or patrol meetings. On at least five of the six campouts, spend the night in\n" +
                 "a tent that you pitch or other structure that you help erect (such as a lean-to,\n" +
@@ -405,7 +531,8 @@ public class Scout extends Activity {
                         "Class requirement 11, participate in a Scoutmaster conference.",
                 " 13) Successfully complete your board of review for the First Class rank."};
 
-        String[] star = {" 1) Be active in your troop for at least four months as a First Class Scout.",
+        String[] star = {"Click here to see what you have Checked off already\n",
+                " 1) Be active in your troop for at least four months as a First Class Scout.",
                 " 2) As a First Class Scout, demonstrate Scout spirit by living the Scout Oath\n" +
                         "and Scout Law. Tell how you have done your duty to God and how you\n" +
                         "have lived the Scout Oath and Scout Law in your everyday life.",
@@ -436,7 +563,8 @@ public class Scout extends Activity {
                 " 7) While a First Class Scout, participate in a Scoutmaster conference",
                 " 8) Successfully complete your board of review for the Star rank."};
 
-        String[] life = {" 1) Be active in your troop for at least six months as a Star Scout.",
+        String[] life = {"Click here to see what you have Checked off already\n",
+                " 1) Be active in your troop for at least six months as a Star Scout.",
                 " 2) As a Star Scout, demonstrate Scout spirit by living the Scout Oath and Scout\n" +
                         "Law. Tell how you have done your duty to God and how you have lived the\n" +
                         "Scout Oath and Scout Law in your everyday life.",
@@ -479,7 +607,8 @@ public class Scout extends Activity {
                 " 7) While a Star Scout, participate in a Scoutmaster conference. ",
                 " 8) Successfully complete your board of review for the Life rank."};
 
-        String[] eagle = {" 1) Be active in your troop for at least six months as a Life Scout.",
+        String[] eagle = {"Click here to see what you have Checked off already\n",
+                " 1) Be active in your troop for at least six months as a Life Scout.",
                 " 2) As a Life Scout, demonstrate Scout Spirit by living the Scout Oath and Scout\n" +
                         "Law. Tell how you have done your duty to God, how you have lived the Scout\n" +
                         "Oath and Scout Law in your everyday life, and how your understanding\n" +
@@ -551,6 +680,13 @@ public class Scout extends Activity {
 
             regs.put(ranks, childList);
 
+            ScoutNum = scout.length;
+            TenderfoorNum = tenderfoot.length;
+            SecondClassNum = secondClass.length;
+            FirstClassNum = firstClass.length;
+            StarNum = star.length;
+            LifeNum = life.length;
+            EagleNum = eagle.length;
         }
 
     }
@@ -561,17 +697,245 @@ public class Scout extends Activity {
             childList.add(lister);
     }
 
-    public void buttonTime() {
+    private int getRegNum(int groupPosition) {
+        switch (groupPosition) {
+            case 0:
+                return ScoutNum;
 
-        button = (Button) findViewById(R.id.button);
-        button.setOnClickListener(new View.OnClickListener() {
+            case 1:
+                return TenderfoorNum;
 
-            public void onClick(View v) {
-                marker = (RadioButton) findViewById(R.id.radioButton);
-                Toast.makeText(Scout.this, marker.getText(), Toast.LENGTH_SHORT).show();
+            case 2:
+                return SecondClassNum;
 
+            case 3:
+                return FirstClassNum;
+
+            case 4:
+                return StarNum;
+
+            case 5:
+                return LifeNum;
+
+            case 6:
+                return EagleNum;
+
+            default: return -1;
+
+        }
+
+    }
+    public void setupBool(){
+        scoutTrac = new boolean[ScoutNum];
+        tenderfootTrac = new boolean[TenderfoorNum];
+        secondClassTrac = new boolean[SecondClassNum];
+        firstClassTrac = new boolean[FirstClassNum];
+        starTrac = new boolean[StarNum];
+        lifeTrac = new boolean[LifeNum];
+        eagleTrac = new boolean[EagleNum];
+    }
+    private void fillBool(int rank ,int reg, boolean done)
+    {
+        switch(rank){
+            case 0: scoutTrac[reg]= done;
+                break;
+            case 1: tenderfootTrac [reg] = done;
+                break;
+            case 2: secondClassTrac[reg] = done;
+                break;
+            case 3: firstClassTrac[reg] = done;
+                break;
+            case 4: starTrac[reg] = done;
+                break;
+            case 5: lifeTrac[reg] = done;
+                break;
+            case 6: eagleTrac[reg] = done;
+                break;
+        }
+    }
+
+    public boolean getBool(int rank, int reg){
+        switch(rank){
+            case 0:  return scoutTrac[reg];
+
+            case 1: return tenderfootTrac [reg];
+
+            case 2: return secondClassTrac[reg];
+
+            case 3: return firstClassTrac[reg];
+
+            case 4: return starTrac[reg];
+
+            case 5: return lifeTrac[reg];
+
+            case 6: return eagleTrac[reg];
+
+            default: return false;
+        }
+
+    }
+    private void createDB(){
+
+        for(int i = 0; i < FirstClassNum;i++)// creating table and filling values for first class
+        {
+            db.insertReg(3,firstClassTrac[i]);
+        }
+
+        for(int i = 0; i < ScoutNum;i++)// filling the values on the table
+        {
+            db.updateReg(0,scoutTrac[i],i);
+        }
+
+        for(int i = 0; i < TenderfoorNum;i++)
+        {
+            db.updateReg(1,tenderfootTrac[i],i);
+        }
+
+        for(int i = 0; i < SecondClassNum;i++)
+        {
+            db.updateReg(2,secondClassTrac[i],i);
+        }
+         for(int i = 0; i < StarNum;i++)
+        {
+            db.updateReg(4,starTrac[i],i);
+        }
+
+        for(int i = 0; i < LifeNum;i++)
+        {
+            db.updateReg(5,lifeTrac[i],i);
+        }
+
+        for(int i = 0; i < EagleNum;i++)
+        {
+            int j = i;
+
+            db.updateReg(6,eagleTrac[i],j);
+        }
+    }
+
+    private void updateBool(){
+        int temp = 0;
+
+        for(int i = 0; i < ScoutNum;i++)// filling the values on the table
+        {
+           Cursor sc = db.getData(0,i);
+           sc.moveToFirst();
+           temp = sc.getInt(sc.getColumnIndex("scout"));
+            if(i < ScoutNum - 1) {
+                int j = i;
+                j++;
+                scoutTrac[j] = isItTrue(temp);
             }
 
-        });
+        }
+
+        for(int i = 0; i < TenderfoorNum;i++)
+        {
+            Cursor tf = db.getData(1,i);
+            tf.moveToFirst();
+            temp = tf.getInt(tf.getColumnIndex("tenderfoot"));
+            if(i < TenderfoorNum - 1) {
+                int j = i;
+                j++;
+                tenderfootTrac[j] = isItTrue(temp);
+            }
+
+        }
+
+        for(int i = 0; i < SecondClassNum;i++)
+        {
+            Cursor se = db.getData(2,i);
+            se.moveToFirst();
+            temp = se.getInt(se.getColumnIndex("secondClass"));
+            if(i < SecondClassNum - 1 ) {
+                int j = i;
+                j++;
+                secondClassTrac[j] = isItTrue(temp);
+            }
+
+        }
+        for(int i = 0; i < 38;i++)// creating table and filling values for first class
+        {
+            Cursor fc = db.getData(3,i);
+            fc.moveToFirst();
+            temp = fc.getInt(fc.getColumnIndex("firstClass"));
+            if(i < 38-1) {
+                int j = i;
+                j++;
+                firstClassTrac[j] = isItTrue(temp);
+            }
+
+        }
+        for(int i = 0; i < StarNum;i++)
+        {
+            Cursor st = db.getData(4,i);
+            st.moveToFirst();
+            temp = st.getInt(st.getColumnIndex("star"));
+            if(i < StarNum - 1) {
+                int j = i;
+                j++;
+                starTrac[j] = isItTrue(temp);
+            }
+
+        }
+
+        for(int i = 0; i < LifeNum;i++)
+        {
+            Cursor li = db.getData(5,i);
+            li.moveToFirst();
+            temp = li.getInt(li.getColumnIndex("life"));
+            if(i < LifeNum -1){
+                int j = i;
+                j++;
+                lifeTrac[j] = isItTrue(temp);
+            }
+
+        }
+
+        for(int i = 0; i < EagleNum;i++)
+        {
+            Cursor ea = db.getData(6,i);
+                ea.moveToFirst();
+            temp = ea.getInt(ea.getColumnIndex("eagle"));
+            if(i < EagleNum-1) {
+                int j = i;
+                j++;
+                eagleTrac[j] = isItTrue(temp);
+            }
+
+        }
+    }
+
+    private boolean isItTrue(int id){
+        if(id == 1)
+        {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    public boolean check(int id) {
+        int counter = 0;
+        switch(id) {
+            case 0: for(int i=1; i<ScoutNum;i++)
+                    {
+                        if(scoutTrac[i]==true)
+                        {
+                            counter++;
+                        }
+                    }
+                    if(counter == ScoutNum-1)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return true;
+                    }
+            default: return false;
+        }
+
     }
 }

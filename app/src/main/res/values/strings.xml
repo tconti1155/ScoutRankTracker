@@ -4,5 +4,7 @@
     <string name="app_name">Scout Rank Tracker</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
-
+    <color name= "green">#198124</color>
+    <color name= "Scoutred">#F71F1F</color>
+    <color name="tan">#D7B565</color>
 </resources>
