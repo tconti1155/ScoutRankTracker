@@ -6,20 +6,12 @@ import java.util.List;
 import java.util.Map;
 
 import android.app.Activity;
-import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteStatement;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.View;
-import android.util.DisplayMetrics;
-import android.widget.Button;
 import android.widget.ExpandableListView;
 import android.widget.ExpandableListView.OnChildClickListener;
-import android.widget.ImageView;
-import android.widget.RadioButton;
 import android.widget.Toast;
 import android.view.MenuItem;
 
@@ -61,7 +53,6 @@ public class Scout extends Activity {
         if(db.tableExist()==false) {
             createDB();
         }
-        number = new int[10];
         expListView = (ExpandableListView) findViewById(R.id.expandableListView);
         final ExpandableListAdapter expListAdapter = new ExpandableListAdapter(this, groupList, regs);
         expListView.setAdapter(expListAdapter);
@@ -128,10 +119,6 @@ public class Scout extends Activity {
                 final String selected = (String) expListAdapter.getChild(groupPosition, childPosition);
                 int index = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, childPosition));
                 rankNum = getRegNum(groupPosition);
-                /*if(check(groupPosition)==true) {
-                    ImageView symbol = (ImageView) findViewById(R.id.image);
-                    symbol.setVisibility(View.GONE);
-                }*/
                 rankRegs = getBool(groupPosition,childPosition);
                if(childPosition == 0) {
                    for (int i = 0; i < rankNum; i++) {
