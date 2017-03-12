@@ -1,10 +1,13 @@
 package com.example.thomas.scoutranktracker;
 
-
+/* the following sites were used as references to create the app
+    Expandable List View: http://theopentutorials.com/tutorials/android/listview/android-expandable-list-view-example/
+    Selecting items in Database: http://zetcode.com/db/sqlite/select/
+    SQLite database: https://www.tutorialspoint.com/android/android_sqlite_database.htm
+ */
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import java.io.File;
@@ -14,9 +17,9 @@ import java.io.File;
  */
 public class Database extends SQLiteOpenHelper{
 
-    public static final String DATABASE_NAME = "ScoutTracker.db";
-    public static final String RANKS_TABLE_NAME = "ranks";
-    public static final String RANKS_COLUMN_ID = "id";
+    public static final String DATABASE_NAME = "ScoutTracker.db";// creating database file
+    public static final String RANKS_TABLE_NAME = "ranks";// naming the table
+    public static final String RANKS_COLUMN_ID = "id";// creating the columns
     public static final String RANKS_COLUMN_SCOUT = "scout";
     public static final String RANKS_COLUMN_TENDERFOOT = "tenderfoot";
     public static final String RANKS_COLUMN_SECONDCLASS = "secondclass";
@@ -30,6 +33,7 @@ public class Database extends SQLiteOpenHelper{
     }
 
     @Override
+    //creates the database
     public void onCreate(SQLiteDatabase db)
     {
         db.execSQL("create table ranks "+
@@ -37,16 +41,18 @@ public class Database extends SQLiteOpenHelper{
     }
 
     @Override
+    //for when the table needs to upgraded.
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion){
         db.execSQL("DROP TABLE IF EXISTS ranks");
         onCreate(db);
     }
 
+    // inserting requirements to table
     public boolean insertReg(int id, boolean reg)
     {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues contentValues = new ContentValues();
-        switch(id)
+        SQLiteDatabase db = this.getWritableDatabase();// creating database SQlite Varaible
+        ContentValues contentValues = new ContentValues();// creating a ContentsValues
+        switch(id)// filling the values for a given id and reg.
         {
             case 0: contentValues.put("scout",reg);
                     break;
@@ -63,10 +69,11 @@ public class Database extends SQLiteOpenHelper{
             case 6: contentValues.put("eagle", reg);
                     break;
         }
-        db.insert("ranks", null,contentValues);
+        db.insert("ranks", null,contentValues);// inserting it into the table
         return true;
     }
 
+    //updating the values in the table
     public void updateReg(int id, boolean reg, int regNum)
     {
         SQLiteDatabase db = this.getWritableDatabase();
@@ -88,45 +95,20 @@ public class Database extends SQLiteOpenHelper{
             case 6: contentValues.put("eagle", reg);
                 break;
         }
-
+        //updating the values in the table
         db.update("ranks", contentValues, "id = ?",new String[]{Integer.toString(regNum)});
     }
 
+    // retrieving the data from the table
     public Cursor getData(int id, int reg){
-        reg++;
+        reg++;// increating the reg to match up with the table and array.
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor res = db.rawQuery("select * from ranks where id=" + reg + "", null);
-        /*switch (id) {
-            case 0:
-                res = db.rawQuery("select scout from ranks where scout like id=" + reg + "", null);
-                break;
-            case 1:
-                res = db.rawQuery("select tenderfoot from ranks where tenderfoot like id=" + reg + "", null);
-                break;
-            case 2:
-                res = db.rawQuery("select secondclass from ranks where secondclass like id=" + reg + "", null);
-                break;
-            case 3:
-                res = db.rawQuery("select firstclass from ranks where firstclass like id=" + reg + "", null);
-                break;
-            case 4:
-                res = db.rawQuery("select star from ranks where star like id=" + reg + "", null);
-                break;
-            case 5:
-                res = db.rawQuery("select life from ranks where life like id=" + reg + "", null);
-                break;
-            case 6:
-                res = db.rawQuery("select eagle from ranks where eagle like id=" + reg + "", null);
-                break;
-        }*/
-        return res;
-    }
-    public int numberOfRows(){
-        SQLiteDatabase db = this.getReadableDatabase();
-        int numRows = (int) DatabaseUtils.queryNumEntries(db, RANKS_TABLE_NAME);
-        return numRows;
+        Cursor res = db.rawQuery("select * from ranks where id=" + reg + "", null);// getting the information from table and putting into res
+
+        return res;// returning res.
     }
 
+    //needing to exist the table
     public boolean tableExist() {
         File dbtest = new File("/data/data/com.example.thomas.scoutranktracker/databases/ScoutTracker.db");
         if (dbtest.exists()) {

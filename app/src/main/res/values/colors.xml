@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!-- create tan to be the selector color-->
 <resources>
-    <drawable name= "forestgreen">#198124</drawable>
-    <drawable name= "red">#F71F1F</drawable>
     <drawable name="tan">#D7B565</drawable>
 </resources>

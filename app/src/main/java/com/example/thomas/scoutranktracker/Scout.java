@@ -1,10 +1,13 @@
 package com.example.thomas.scoutranktracker;
-
+/* the following sites were used as references to create the app
+    Expandable List View: http://theopentutorials.com/tutorials/android/listview/android-expandable-list-view-example/
+    Selecting items in Database: http://zetcode.com/db/sqlite/select/
+    SQLite database: https://www.tutorialspoint.com/android/android_sqlite_database.htm
+ */
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import android.app.Activity;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -18,21 +21,21 @@ import android.view.MenuItem;
 
 public class Scout extends Activity {
 
-    List<String> groupList;
-    List<String> childList;
-    Map<String, List<String>> regs;
-    ExpandableListView expListView;
-    Database db = new Database(this);
+    List<String> groupList;//creating a group list
+    List<String> childList;//creating a child list
+    Map<String, List<String>> regs;// creating a map for the requirements
+    ExpandableListView expListView;// calling the expandableList class
+    Database db = new Database(this);// calls database class
 
-    boolean[] scoutTrac;
+    boolean[] scoutTrac;// crating boolean arrays for all ranks.
     boolean[] tenderfootTrac;
     boolean[] secondClassTrac;
     boolean[] firstClassTrac;
     boolean[] starTrac;
     boolean[] lifeTrac;
     boolean[] eagleTrac;
-    int[] number;
-    int rankNum;
+
+    int rankNum;//creating ints for number of items in arrays.
     int ScoutNum;
     int TenderfoorNum;
     int SecondClassNum;
@@ -40,9 +43,11 @@ public class Scout extends Activity {
     int StarNum;
     int LifeNum;
     int EagleNum;
-    boolean rankRegs;
+
+    boolean rankRegs; // creating a boolean for rank regs
 
     @Override
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scout);
@@ -50,23 +55,26 @@ public class Scout extends Activity {
         createRankList(); // Makes rank list
         createRegs();// Fills in requirements
         setupBool();//creating boolean array;
-        if(db.tableExist()==false) {
+        if(db.tableExist()==false) {// checking to see if the table exists
             createDB();
         }
-        expListView = (ExpandableListView) findViewById(R.id.expandableListView);
-        final ExpandableListAdapter expListAdapter = new ExpandableListAdapter(this, groupList, regs);
-        expListView.setAdapter(expListAdapter);
+        else
+        {
+            updateBool();
+        }
+        expListView = (ExpandableListView) findViewById(R.id.expandableListView);// assigning the list view
+        final ExpandableListAdapter expListAdapter = new ExpandableListAdapter(this, groupList, regs);// creating the adapter
+        expListView.setAdapter(expListAdapter);//setting the adapter
 
         expListView.setOnChildClickListener(new OnChildClickListener() {
 
-            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
-                final String selected = (String) expListAdapter.getChild(groupPosition, childPosition);
+            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {// listing for click
+                // creating an idex to fill in the color of the choice item.
                 int index = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, childPosition));
-                rankNum = getRegNum(groupPosition);
-
-                rankRegs = getBool(groupPosition,childPosition);
-                if(childPosition == 0) {
-                    for (int i = 0; i < rankNum; i++) {
+                rankNum = getRegNum(groupPosition);// getting the number of the items from the GroupPosition
+                rankRegs = getBool(groupPosition,childPosition);// getting the value of the boolean array for groupPosition
+                if(childPosition == 0) {//run the check to see if any regs  are done in child class.
+                    for (int i = 0; i < rankNum; i++) {// loops to change the set to done color
                         boolean temp = getBool(groupPosition, i);
                         if (temp == true) {
                             int j = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, i));
@@ -75,94 +83,29 @@ public class Scout extends Activity {
                     }
                 }
 
-                if (rankRegs == false && childPosition != 0) { // adding a requirement to the table
-
-                    if (childPosition != 0) {
-                        parent.setItemChecked(index, true);
-                        rankRegs= true;
-                        fillBool(groupPosition,childPosition, true);
-                        db.updateReg(groupPosition,rankRegs,childPosition);
-                        int testing = db.numberOfRows();
-
-                        Toast.makeText(getBaseContext(), "Checked OFF! testing= " + testing + " ", Toast.LENGTH_SHORT).show();
-
-                    }
-                    else {
-                        Toast.makeText(getBaseContext(), "You can't Check the Check", Toast.LENGTH_SHORT).show();
-                    }
+                if (rankRegs == false && childPosition != 0) { // adding a requirement to the table and checking to see if the childposition is not zero
+                    parent.setItemChecked(index, true);// changing the color of the item to the selected color
+                    rankRegs = true;// changing the rankregs to true
+                    fillBool(groupPosition, childPosition, true);// filling the boolean array
+                    db.updateReg(groupPosition, rankRegs, childPosition);// updating the data base
+                    Toast.makeText(getBaseContext(), "Checked OFF!", Toast.LENGTH_SHORT).show();// displaying to the user the check has been made
                 }
+                /* for the user who accidentally hits the wrong item or needs to change what has been selected.*/
                 else if(rankRegs == true)// removing a requirement from the table
                 {
-                    index = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, childPosition));
-                    parent.setItemChecked(index,false);
-                    rankRegs = false;
-                    fillBool(groupPosition,childPosition, false);
-                    db.updateReg(groupPosition,rankRegs,childPosition);
+                    parent.setItemChecked(index,false);//changing the selected item back to unselected color
+                    rankRegs = false;//changing ranks to false
+                    fillBool(groupPosition,childPosition, false);//changing the boolean array to false
+                    db.updateReg(groupPosition,rankRegs,childPosition);//making the changes to table.
+                    // letting the user know it has been change has been updated
                     Toast.makeText(getBaseContext(), "Guess you didn't do that one", Toast.LENGTH_SHORT).show();
                 }
 
-                return true;
+                return true;//returning true for the child on click
             }
 
         });
     }
-    @Override
-    protected void onResume(){
-        super.onResume();
-        expListView = (ExpandableListView) findViewById(R.id.expandableListView);
-        final ExpandableListAdapter expListAdapter = new ExpandableListAdapter(this, groupList, regs);
-        expListView.setAdapter(expListAdapter);
-        updateBool();
-        expListView.setOnChildClickListener(new OnChildClickListener() {
-
-            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
-                final String selected = (String) expListAdapter.getChild(groupPosition, childPosition);
-                int index = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, childPosition));
-                rankNum = getRegNum(groupPosition);
-                rankRegs = getBool(groupPosition,childPosition);
-               if(childPosition == 0) {
-                   for (int i = 0; i < rankNum; i++) {
-                       boolean temp = getBool(groupPosition, i);
-                       if (temp == true) {
-                           int j = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, i));
-                           parent.setItemChecked(j, true);
-                       }
-                   }
-               }
-
-                if (rankRegs == false && childPosition != 0) { // adding a requirement to the table
-
-                    if (childPosition != 0) {
-                        parent.setItemChecked(index, true);
-                        rankRegs= true;
-                        fillBool(groupPosition,childPosition, true);
-                        db.updateReg(groupPosition,rankRegs,childPosition);
-                        int testing = db.numberOfRows();
-
-                        Toast.makeText(getBaseContext(), "Checked OFF! testing= " + testing + " ", Toast.LENGTH_SHORT).show();
-
-                    }
-                    else {
-                        db.updateReg(groupPosition,rankRegs,childPosition);
-                        Toast.makeText(getBaseContext(), "You can't Check the Check", Toast.LENGTH_SHORT).show();
-                    }
-                }
-                else if(rankRegs == true)// removing a requirement from the table
-                {
-                    index = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, childPosition));
-                    parent.setItemChecked(index,false);
-                    rankRegs = false;
-                    fillBool(groupPosition,childPosition, false);
-                    db.updateReg(groupPosition,rankRegs,childPosition);
-                    Toast.makeText(getBaseContext(), "Guess you didn't do that one", Toast.LENGTH_SHORT).show();
-                }
-
-                return true;
-            }
-
-        });
-    }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -185,9 +128,11 @@ public class Scout extends Activity {
 
         return super.onOptionsItemSelected(item);
     }
+
+    /* creates regs and ranks for the expanableListView using lists and strings and arrays*/
     private void createRankList() {
-        groupList = new ArrayList<String>();
-        groupList.add("Scout");
+        groupList = new ArrayList<String>();//creating group list with a string
+        groupList.add("Scout");//filling the grouplist
         groupList.add("Tenderfoot");
         groupList.add("Second Class");
         groupList.add("First Class");
@@ -195,8 +140,9 @@ public class Scout extends Activity {
         groupList.add("Life");
         groupList.add("Eagle");
     }
-
+    //to create and fill the regs
     private void createRegs() {
+        // creates and sets the strings.
         String[] scout = {"Click here to see what you have Checked off already\n",
                 " 1a) Repeat from memory the Scout Oath, Scout Law, Scout motto, and Scout\n" +
                 "slogan. In your own words, explain their meaning. ",
@@ -647,9 +593,9 @@ public class Scout extends Activity {
                         "(This requirement may be met after age 18, in accordance with Guide to\n" +
                         "Advancement topic 8.0.3.1.11). "};
 
-        regs = new LinkedHashMap<String, List<String>>();
+        regs = new LinkedHashMap<String, List<String>>();// creating the hash map for regs
 
-        for (String ranks : groupList) {
+        for (String ranks : groupList) {//creating ranks and  loading the loading each of the strings to the its child
             if (ranks.equals("Scout")) {
                 loadChild(scout);
             } else if (ranks.equals("Tenderfoot"))
@@ -665,9 +611,9 @@ public class Scout extends Activity {
             else
                 loadChild(eagle);
 
-            regs.put(ranks, childList);
+            regs.put(ranks, childList);// puts the ranks and childs to regs map.
 
-            ScoutNum = scout.length;
+            ScoutNum = scout.length;// getting the lenghts of each string array
             TenderfoorNum = tenderfoot.length;
             SecondClassNum = secondClass.length;
             FirstClassNum = firstClass.length;
@@ -678,13 +624,13 @@ public class Scout extends Activity {
 
     }
 
-    private void loadChild(String[] regs) {
-        childList = new ArrayList<String>();
-        for (String lister : regs)
+    private void loadChild(String[] regs) {// loading the children into the child list
+        childList = new ArrayList<String>();// creating a array list
+        for (String lister : regs)// adding the requirements.
             childList.add(lister);
     }
 
-    private int getRegNum(int groupPosition) {
+    private int getRegNum(int groupPosition) {// getting the number for regs for each rank
         switch (groupPosition) {
             case 0:
                 return ScoutNum;
@@ -712,7 +658,7 @@ public class Scout extends Activity {
         }
 
     }
-    public void setupBool(){
+    public void setupBool(){// creating the boolean for each rank
         scoutTrac = new boolean[ScoutNum];
         tenderfootTrac = new boolean[TenderfoorNum];
         secondClassTrac = new boolean[SecondClassNum];
@@ -721,6 +667,7 @@ public class Scout extends Activity {
         lifeTrac = new boolean[LifeNum];
         eagleTrac = new boolean[EagleNum];
     }
+    // filling the in the boolean for each rank
     private void fillBool(int rank ,int reg, boolean done)
     {
         switch(rank){
@@ -740,7 +687,7 @@ public class Scout extends Activity {
                 break;
         }
     }
-
+    // retrieving the boolean for a given rank and reg.
     public boolean getBool(int rank, int reg){
         switch(rank){
             case 0:  return scoutTrac[reg];
@@ -801,17 +748,22 @@ public class Scout extends Activity {
     }
 
     private void updateBool(){
-        int temp = 0;
+        int temp = 0;// temp for getting
 
         for(int i = 0; i < ScoutNum;i++)// filling the values on the table
         {
-           Cursor sc = db.getData(0,i);
-           sc.moveToFirst();
-           temp = sc.getInt(sc.getColumnIndex("scout"));
+           Cursor sc = db.getData(0,i);// creating a variable from database
+           sc.moveToFirst();// moving the curosr to the first row
+           temp = sc.getInt(sc.getColumnIndex("scout"));// retrieving value from database
+            /* filling the table of boolean arrays for each rank. and also taking care not to
+            include the first value in the array. due to it being a check to see what has been
+            completed by user.
+             */
             if(i < ScoutNum - 1) {
                 int j = i;
-                j++;
-                scoutTrac[j] = isItTrue(temp);
+                j++;// aligning database with array
+                scoutTrac[j] = isItTrue(temp);/* turing temp into a boolean value then equaling to
+                 rank boolean value array*/
             }
 
         }
@@ -893,6 +845,7 @@ public class Scout extends Activity {
         }
     }
 
+    // checking to see if a given value is true or false
     private boolean isItTrue(int id){
         if(id == 1)
         {
